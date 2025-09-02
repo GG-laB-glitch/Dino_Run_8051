@@ -1,0 +1,182 @@
+#include <reg51.h>
+
+// Pin configurations
+sbit rs = P3 ^ 2; // RS pin connected to pin 2 of port 3
+sbit rw = P3 ^ 3; // RW pin connected to pin 3 of port 3
+sbit en = P3 ^ 4; // E pin connected to pin 4 of port 3
+sbit cen = P3 ^ 7; // Switch connection for dino movement
+
+// Data and commands
+code unsigned char a[5] = {0x02, 0x38, 0x0C, 0x01, 0x06};
+code unsigned char mov[16] = {0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7,
+                              0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF};
+code unsigned char moc[16] = {0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
+                              0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F};
+code unsigned char intro[] = "WELCOME TO DINO";
+code unsigned char intro2[] = "RUN....!!";
+code unsigned char intro3[] = "ENJOY...!!";
+code unsigned char end[] = "GAME OVER...";
+code unsigned char score[] = {0xFC, 0x60, 0xDA, 0xF2, 0x66, 0xB6, 0xBE, 0xE0, 0xFE, 0xF6};
+
+// Segment display
+#define SegOne 0x01
+#define SegTwo 0x02
+#define SegThree 0x04
+#define SegFour 0x08
+
+// Function prototypes
+void delay(unsigned int time);
+void cmdwrite(void);
+void datawrite(void);
+void scores(void);
+int dinojump(int);
+
+// Global variables
+unsigned int i, j, k, l, count;
+int cnt = 0, num, temp, temp1, temp2, temp3, h, zeo;
+
+void delay(unsigned int time) {
+    unsigned int i, j;
+    for (i = 0; i < time; i++)
+        for (j = 0; j < 5; j++);
+}
+
+void cmdwrite() {
+    rs = 0;
+    rw = 0;
+    en = 1;
+    delay(1);
+    en = 0;
+}
+
+void datawrite() {
+    rs = 1;
+    rw = 0;
+    en = 1;
+    delay(1);
+    en = 0;
+}
+
+void main() {
+    unsigned char cactii[8] = {0x04, 0x05, 0x15, 0x15, 0x0E, 0x04, 0x04, 0x04};
+    unsigned char dino[8] = {0x0F, 0x0B, 0x0F, 0x0C, 0x0F, 0x0C, 0x1C, 0x06};
+    unsigned char blank[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    // Initialize CGRAM
+    P1 = 0x40 + 8; // Cactii
+    cmdwrite();
+    for (i = 0; i < 8; i++) {
+        P1 = cactii[i];
+        datawrite();
+    }
+    delay(50);
+
+    P1 = 0x40 + 16; // Dino
+    cmdwrite();
+    for (i = 0; i < 8; i++) {
+        P1 = dino[i];
+        datawrite();
+    }
+    delay(50);
+
+    P1 = 0x40 + 24; // Blank
+    cmdwrite();
+    for (i = 0; i < 8; i++) {
+        P1 = blank[i];
+        datawrite();
+    }
+    delay(50);
+
+    // Display intro
+    for (i = 0; i < 5; i++) {
+        P1 = a[i];
+        cmdwrite();
+        delay(100);
+    }
+
+    P1 = 0x80;
+    cmdwrite();
+    for (i = 0; intro[i] != '\0'; i++) {
+        P1 = intro[i];
+        datawrite();
+        delay(1000);
+    }
+
+    P1 = 0xC3;
+    cmdwrite();
+    for (i = 0; intro2[i] != '\0'; i++) {
+        P1 = intro2[i];
+        datawrite();
+        delay(1000);
+    }
+
+    P1 = 0x82;
+    cmdwrite();
+    for (i = 0; intro3[i] != '\0'; i++) {
+        P1 = intro3[i];
+        datawrite();
+        delay(1000);
+    }
+
+    // Game logic
+    while (1) {
+        for (i = 0; i < 14; i++) {
+            P1 = mov[i + 1];
+            cmdwrite();
+            scores();
+            P1 = 0x02;
+            datawrite();
+            delay(1000);
+
+            if (cen == 0) {
+                i = dinojump(i + 1);
+            }
+
+            if (i == 13 && cen == 1) { // Game Over
+                P1 = 0x01;
+                cmdwrite();
+                P1 = 0x82;
+                cmdwrite();
+                for (j = 0; end[j] != '\0'; j++) {
+                    P1 = end[j];
+                    datawrite();
+                }
+                while (1);
+            }
+        }
+    }
+}
+
+int dinojump(int k) {
+    P1 = mov[k];
+    cmdwrite();
+    P1 = 0x03;
+    datawrite();
+    P1 = moc[k + 2];
+    cmdwrite();
+    P1 = 0x02;
+    datawrite();
+    delay(10000);
+    return k;
+}
+
+void scores() {
+    num = cnt;
+    temp = num / 1000;
+    P0 = SegOne;
+    P2 = score[temp];
+
+    num %= 1000;
+    temp1 = num / 100;
+    P0 = SegTwo;
+    P2 = score[temp1];
+
+    num %= 100;
+    temp2 = num / 10;
+    P0 = SegThree;
+    P2 = score[temp2];
+
+    temp3 = num % 10;
+    P0 = SegFour;
+    P2 = score[temp3];
+}
