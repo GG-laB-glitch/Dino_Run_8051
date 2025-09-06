@@ -50,3 +50,8 @@ Add sound/buzzer feedback.
 Use a larger LCD or OLED for smoother graphics.
 
 Store high scores in EEPROM.
+
+-- Updates
+
+I have attached a demonstration video of the project
+
